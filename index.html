@@ -1,4 +1,4 @@
-       <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
@@ -15,18 +15,22 @@
       font-family: Arial, sans-serif;
       background-color: #f4f7f5;
       color: #1f2933;
-      padding-top: 76px;
+      padding-top: 82px;
     }
 
-    /* Tools mengambang di bagian atas */
-    .floating-top-bar {
+    /* Wrapper floating bar utama + sub-tools */
+    .floating-wrapper {
       position: fixed;
       top: 10px;
       left: 50%;
       transform: translateX(-50%);
       width: calc(100% - 24px);
       max-width: 640px;
-      background: rgba(255, 255, 255, 0.95);
+      z-index: 1000;
+    }
+
+    .floating-top-bar {
+      background: rgba(255, 255, 255, 0.96);
       backdrop-filter: blur(8px);
       border: 1px solid #d9e2ec;
       border-radius: 14px;
@@ -36,19 +40,63 @@
       align-items: center;
       gap: 8px;
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-      z-index: 1000;
     }
 
+    .floating-top-bar button,
     .floating-top-bar a {
       flex: 1;
       text-align: center;
       text-decoration: none;
+      font-family: inherit;
       font-size: 13px;
       font-weight: bold;
       color: #0f5132;
       background: #e9f5ee;
+      border: none;
       padding: 8px 6px;
       border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .floating-top-bar button.aktif {
+      background: #0f5132;
+      color: #ffffff;
+    }
+
+    /* Sub-tools mengambang di bawah floating bar */
+    .sub-tools-bar {
+      display: none;
+      margin-top: 6px;
+      background: rgba(255, 255, 255, 0.97);
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 8px;
+      gap: 6px;
+      flex-wrap: wrap;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    }
+
+    .sub-tools-bar.tampil {
+      display: flex;
+    }
+
+    .sub-tools-bar button {
+      flex: 1 1 calc(50% - 4px);
+      background: #f0fdf4;
+      color: #14532d;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: bold;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .sub-tools-bar button.aktif-sub {
+      background: #15803d;
+      color: #ffffff;
+      border-color: #15803d;
     }
 
     .container {
@@ -70,14 +118,27 @@
       color: #0f5132;
     }
 
-    .poin-list {
-      margin: 10px 0 0;
-      padding-left: 18px;
+    /* Panel rincian profil: default tertutup sampai dipilih */
+    .detail-profil {
+      display: none;
+      background: #f8faf9;
+      border: 1px solid #d1e7dd;
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 12px;
+      font-size: 14px;
     }
 
-    .poin-list li {
-      margin-bottom: 7px;
-      font-size: 14px;
+    .detail-profil.terbuka {
+      display: block;
+    }
+
+    .detail-profil p {
+      margin: 0 0 8px;
+    }
+
+    .detail-profil p:last-child {
+      margin-bottom: 0;
     }
 
     .rek-box {
@@ -140,26 +201,63 @@
 </head>
 <body>
 
-  <!-- Floating Toolbar di Atas -->
-  <nav class="floating-top-bar" aria-label="Menu cepat">
-    <a href="#profil">Profil</a>
-    <a href="#progres">Progres</a>
-    <a href="#donasi">Donasi</a>
-    <a href="#laporan">Laporan</a>
-  </nav>
+  <!-- Floating Toolbar di Atas + Sub-Tools -->
+  <div class="floating-wrapper">
+    <nav class="floating-top-bar" aria-label="Menu cepat">
+      <button type="button" id="btnMenuProfil" onclick="toggleSubProfil()">Profil ▾</button>
+      <a href="#progres" onclick="tutupSubProfil()">Progres</a>
+      <a href="#donasi" onclick="tutupSubProfil()">Donasi</a>
+      <a href="#laporan" onclick="tutupSubProfil()">Laporan</a>
+    </nav>
+
+    <div class="sub-tools-bar" id="subProfilBar" aria-label="Sub menu profil">
+      <button type="button" id="sub-nama-alamat" onclick="bukaDetailProfil('nama-alamat')">1. Nama &amp; Alamat</button>
+      <button type="button" id="sub-latar-rencana" onclick="bukaDetailProfil('latar-rencana')">2. Latar &amp; Rencana</button>
+      <button type="button" id="sub-lahan-legalitas" onclick="bukaDetailProfil('lahan-legalitas')">3. Lahan &amp; Legalitas</button>
+      <button type="button" id="sub-panitia" onclick="bukaDetailProfil('panitia')">4. Susunan Panitia</button>
+    </div>
+  </div>
 
   <main class="container">
     <section id="profil">
       <h1>Masjid Al-Barokah</h1>
-      <p>Pembangunan ulang total masjid (1 lantai, minimalis modern) karena bangunan lama sejak 1990 sudah tidak memadai.</p>
+      <p style="font-size: 14px; margin-bottom: 8px;">Klik <strong>Profil ▾</strong> di menu mengambang atas untuk memilih rincian yang ingin dibaca.</p>
 
-      <ul class="poin-list">
-        <li><strong>Lokasi:</strong> Blok Kedungkacip, RT 13 RW 04, Desa Tanjungkerta, Kec. Kroya, Kab. Indramayu (45265)</li>
-        <li><strong>Lahan &amp; Legalitas:</strong> Wakaf 490 m² (bangunan baru 180 m², NIB 10.24.000019337.0) &amp; SK Kuwu No. 188/1.048/Pem</li>
-        <li><strong>Target RAB:</strong> Rp 665.684.000</li>
-        <li><strong>Panitia Inti:</strong> Ketua: Masruchan | Sekretaris: Ismail | Bendahara: Dul Karim</li>
-        <li><strong>Kontak:</strong> 083821110706 | masjidalbarokah0609@gmail.com</li>
-      </ul>
+      <!-- Panel 1 -->
+      <div class="detail-profil" id="panel-nama-alamat">
+        <h3>1. Nama Masjid dan Alamat</h3>
+        <p><strong>Nama Masjid:</strong> Masjid Al-Barokah (berdiri sejak tahun 1990)[span_1](start_span)[span_1](end_span)[span_2](start_span)[span_2](end_span).</p>
+        <p><strong>Alamat:</strong> Jl. Babakan Dampyang Gantar, Blok Kedungkacip, RT 13 RW 04, Desa Tanjungkerta, Kec. Kroya, Kab. Indramayu, Jawa Barat (Kode Pos 45265)[span_3](start_span)[span_3](end_span)[span_4](start_span)[span_4](end_span)[span_5](start_span)[span_5](end_span).</p>
+        <p><strong>Kontak:</strong> 083821110706 | masjidalbarokah0609@gmail.com[span_6](start_span)[span_6](end_span).</p>
+      </div>
+
+      <!-- Panel 2 -->
+      <div class="detail-profil" id="panel-latar-rencana">
+        <h3>2. Latar Belakang dan Rencana</h3>
+        <p><strong>Latar Belakang:</strong> Bangunan lama yang berdiri sejak 1990 kondisinya sudah tua/kurang layak dan kapasitasnya tidak lagi mencukupi jamaah saat Sholat Jumat maupun Hari Raya[span_7](start_span)[span_7](end_span)[span_8](start_span)[span_8](end_span).</p>
+        <p><strong>Rencana Pembangunan:</strong> Pembangunan ulang total menjadi masjid 1 lantai dengan konsep minimalis modern (rencana 3 tahap dalam 24 bulan)[span_9](start_span)[span_9](end_span).</p>
+        <p><strong>Target RAB:</strong> Rp 665.684.000[span_10](start_span)[span_10](end_span)[span_11](start_span)[span_11](end_span).</p>
+      </div>
+
+      <!-- Panel 3 -->
+      <div class="detail-profil" id="panel-lahan-legalitas">
+        <h3>3. Lahan dan Legalitas</h3>
+        <p><strong>Luas Lahan &amp; Bangunan:</strong> Tanah wakaf seluas 490 m² dengan rencana luas bangunan baru 180 m²[span_12](start_span)[span_12](end_span)[span_13](start_span)[span_13](end_span).</p>
+        <p><strong>Status Tanah:</strong> Sertipikat Tanah Wakaf NIB 10.24.000019337.0[span_14](start_span)[span_14](end_span).</p>
+        <p><strong>Legalitas Panitia:</strong> Berdasarkan Musyawarah Warga (25 Oktober 2025), SK Kepala Desa Tanjungkerta No. 188/1.048/Pem, dan Surat Keterangan Domisili No. 140/1.047/Pem[span_15](start_span)[span_15](end_span)[span_16](start_span)[span_16](end_span)[span_17](start_span)[span_17](end_span).</p>
+      </div>
+
+      <!-- Panel 4 -->
+      <div class="detail-profil" id="panel-panitia">
+        <h3>4. Susunan Panitia</h3>
+        <p><strong>Penasehat:</strong> Ust. Tarman[span_18](start_span)[span_18](end_span)</p>
+        <p><strong>Pelindung:</strong> Bpk. Udin, Bpk. Sumarsono[span_19](start_span)[span_19](end_span)</p>
+        <p><strong>Ketua:</strong> Masruchan[span_20](start_span)[span_20](end_span)</p>
+        <p><strong>Sekretaris:</strong> Ismail[span_21](start_span)[span_21](end_span)</p>
+        <p><strong>Bendahara:</strong> Dul Karim[span_22](start_span)[span_22](end_span)</p>
+        <p><strong>Seksi Konstruksi:</strong> Kusnadi, Syahrul Sidik, Rifa'i, Slamet[span_23](start_span)[span_23](end_span)</p>
+        <p><strong>Seksi Penggalangan Dana:</strong> Nasirin, Sairin, Yanto, Muhtar, Endi, Udi, Sukar, Hariri[span_24](start_span)[span_24](end_span)</p>
+      </div>
     </section>
 
     <section id="progres">
@@ -171,17 +269,17 @@
       <h2>Saluran Donasi</h2>
 
       <div class="rek-box">
-        <div><strong>Bank Mandiri</strong></div>
-        <div class="rek-number" id="noRekening">1340031912743</div>
-        <div>A/N <strong>DULKARIM (Bendahara)</strong></div>
+        <div><strong>Bank Mandiri</strong>[span_25](start_span)[span_25](end_span)[span_26](start_span)[span_26](end_span)</div>
+        <div class="rek-number" id="noRekening">1340031912743[span_27](start_span)[span_27](end_span)[span_28](start_span)[span_28](end_span)</div>
+        <div>A/N <strong>DULKARIM (Bendahara)</strong>[span_29](start_span)[span_29](end_span)[span_30](start_span)[span_30](end_span)</div>
         <br />
         <button class="btn-copy" type="button" onclick="salinRekening()">Salin No. Rekening</button>
         <span id="statusSalin" style="margin-left: 8px; font-size: 13px; color: #0f5132;"></span>
       </div>
 
       <div class="qris-box">
-        <h3>QRIS MASJID AL BAROKAH</h3>
-        <p style="font-size: 13px; margin-top: 0;">NMID: ID1025453093722</p>
+        <h3>QRIS MASJID AL BAROKAH[span_31](start_span)[span_31](end_span)</h3>
+        <p style="font-size: 13px; margin-top: 0;">NMID: ID1025453093722[span_32](start_span)[span_32](end_span)</p>
         <img src="qris-masjid-al-barokah.jpg" alt="QRIS Masjid Al Barokah" />
       </div>
 
@@ -192,11 +290,46 @@
 
     <section id="laporan">
       <h2>Laporan Keuangan</h2>
-      <p>Bagian ini akan diisi rekap pemasukan dan pengeluaran secara terbuka.</p>
+      <p>Bagian ini akan diisi rekap pemasukan dan pengeluaran secara terbuka[span_33](start_span)[span_33](end_span).</p>
     </section>
   </main>
 
   <script>
+    const daftarPanel = ["nama-alamat", "latar-rencana", "lahan-legalitas", "panitia"];
+
+    function toggleSubProfil() {
+      const bar = document.getElementById("subProfilBar");
+      const btn = document.getElementById("btnMenuProfil");
+      const sedangTampil = bar.classList.contains("tampil");
+
+      if (sedangTampil) {
+        bar.classList.remove("tampil");
+        btn.classList.remove("aktif");
+      } else {
+        bar.classList.add("tampil");
+        btn.classList.add("aktif");
+        document.getElementById("profil").scrollIntoView({ behavior: "smooth" });
+      }
+    }
+
+    function tutupSubProfil() {
+      document.getElementById("subProfilBar").classList.remove("tampil");
+      document.getElementById("btnMenuProfil").classList.remove("aktif");
+    }
+
+    function bukaDetailProfil(key) {
+      daftarPanel.forEach((item) => {
+        const panel = document.getElementById("panel-" + item);
+        const tombol = document.getElementById("sub-" + item);
+        const cocok = item === key;
+
+        panel.classList.toggle("terbuka", cocok);
+        tombol.classList.toggle("aktif-sub", cocok);
+      });
+
+      document.getElementById("profil").scrollIntoView({ behavior: "smooth" });
+    }
+
     function salinRekening() {
       const teks = document.getElementById("noRekening").innerText.trim();
       const status = document.getElementById("statusSalin");
@@ -221,4 +354,3 @@
 
 </body>
 </html>
-        
