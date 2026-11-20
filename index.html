@@ -142,6 +142,33 @@
       margin-bottom: 0;
     }
 
+    /* Baris status & tombol sinkron */
+    .baris-sinkron {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .status-data {
+      font-size: 12px;
+      color: #475569;
+      margin: 0;
+    }
+
+    .btn-sync {
+      background: #e9f5ee;
+      color: #0f5132;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
     /* Rekapitulasi Keuangan Global */
     .rekap-grid {
       display: grid;
@@ -386,12 +413,6 @@
       border-radius: 10px;
       font-size: 14px;
     }
-
-    .status-data {
-      font-size: 12px;
-      color: #475569;
-      margin-bottom: 10px;
-    }
   </style>
 </head>
 <body>
@@ -464,9 +485,12 @@
     <!-- 2. TRANSPARANSI -->
     <section id="transparansi">
       <h2>Transparansi Keuangan</h2>
-      <div class="status-data" id="statusSinkron">Memuat rekap data dari spreadsheet...</div>
+      <div class="baris-sinkron">
+        <p class="status-data" id="statusSinkron">Menghitung rekap data...</p>
+        <button type="button" class="btn-sync" onclick="muatDataTransparansi(true)">Muat Ulang Data</button>
+      </div>
 
-      <!-- Ringkasan Global Seluruh Bulan -->
+      <!-- Ringkasan Global Seluruh Bulan (100% hasil rumus JS) -->
       <div class="rekap-grid">
         <div class="rekap-card">
           <div class="rekap-label">Total Donasi Cash</div>
@@ -593,16 +617,34 @@
     const SHEET_ID = "1qzGWSaoZY9etw7Cmw1My7njzwzCIxxMyjfv6_X68he8";
     const TARGET_RAB = 665684000;
 
+    // Data awal/cadangan mentah — semua total, subtotal bulan, selisih, dan grafik dihitung lewat rumus
+    const FALLBACK_DONASI = [
+      { Nama: "Donasi Cash (Nov 2025 - Nov 2026)", Nominal: 70221500, Jenis: "cash", Alamat: "Rekap", Tanggal: "01/11/2025" },
+      { Nama: "Sunandi", Nominal: 11200000, Jenis: "Matrial", Alamat: "-", NamaBarang: "Pasir", Satuan: "Truk", Volume: 4, Tanggal: "11/11/2025" },
+      { Nama: "Sunandi", Nominal: 9750000, Jenis: "Matrial", Alamat: "-", NamaBarang: "Besi 10mm", Satuan: "Batang", Volume: 150, Tanggal: "12/11/2025" },
+      { Nama: "Sunandi", Nominal: 4500000, Jenis: "Matrial", Alamat: "-", NamaBarang: "Besi 6mm", Satuan: "Batang", Volume: 150, Tanggal: "13/11/2025" },
+      { Nama: "Sumarsono", Nominal: 1500000, Jenis: "Matrial", Alamat: "-", NamaBarang: "Batu pondasi", Satuan: "Dumptruk", Volume: 1, Tanggal: "14/11/2025" },
+      { Nama: "Sunandi", Nominal: 8400000, Jenis: "Matrial", Alamat: "-", NamaBarang: "Semen", Satuan: "Sak", Volume: 140, Tanggal: "15/11/2025" },
+      { Nama: "Sunandi", Nominal: 1500000, Jenis: "Matrial", Alamat: "-", NamaBarang: "Batu pondasi", Satuan: "Dumptruk", Volume: 1, Tanggal: "16/11/2025" },
+      { Nama: "Rasmita (kuwu)", Nominal: 1800000, Jenis: "Matrial", Alamat: "-", NamaBarang: "Batu split", Satuan: "Dumptruk", Volume: 1, Tanggal: "17/11/2025" },
+      { Nama: "Fajar", Nominal: 2400000, Jenis: "Matrial", Alamat: "-", NamaBarang: "Semen", Satuan: "Sak", Volume: 40, Tanggal: "18/11/2025" },
+      { Nama: "Tamjid", Nominal: 2200000, Jenis: "Matrial", Alamat: "-", NamaBarang: "Pasir urug", Satuan: "Dumptruk", Volume: 2, Tanggal: "19/11/2025" },
+      { Nama: "Donasi Material Lanjutan", Nominal: 66969000, Jenis: "Matrial", Alamat: "-", NamaBarang: "Material Tahap Berikutnya", Satuan: "Paket", Volume: 1, Tanggal: "01/06/2026" }
+    ];
+
+    const FALLBACK_PENGELUARAN = [
+      { NamaBarang: "Material, Tenaga, Konsumsi & Alat", Satuan: "Unit", Volume: 1, JumlahHarga: 192152000, Tanggal: "01/11/2025" }
+    ];
+
     const daftarPanelProfil = ["nama-alamat", "latar-rencana", "lahan-legalitas", "panitia"];
     const daftarTabTransparansi = ["cash", "material", "pengeluaran", "grafik"];
-
     const namaBulanSingkat = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
     let dataCashPerBulan = {};
     let dataMaterialPerBulan = {};
     let dataPengeluaranPerBulan = {};
     let urutanBulanGlobal = [];
-    let grafikTerrender = false;
+    let chartInstances = {};
 
     function formatRupiah(angka) {
       const nilaiBulat = Math.round(Number(angka) || 0);
@@ -647,4 +689,477 @@
     function catatBulan(mapBulan) {
       Object.values(mapBulan).forEach((item) => {
         if (!urutanBulanGlobal.some((b) => b.sortKey === item.sortKey)) {
-          urutanBulanGlobal.push({ sortKey: item.sortKey, label: 
+          urutanBulanGlobal.push({ sortKey: item.sortKey, label: item.label });
+        }
+      });
+      urutanBulanGlobal.sort((a, b) => a.sortKey - b.sortKey);
+    }
+
+    function toggleSubBar(jenis) {
+      const barProfil = document.getElementById("subProfilBar");
+      const btnProfil = document.getElementById("btnMenuProfil");
+      const barTrans = document.getElementById("subTransparansiBar");
+      const btnTrans = document.getElementById("btnMenuTransparansi");
+
+      if (jenis === "profil") {
+        const buka = !barProfil.classList.contains("tampil");
+        barProfil.classList.toggle("tampil", buka);
+        btnProfil.classList.toggle("aktif", buka);
+        barTrans.classList.remove("tampil");
+        btnTrans.classList.remove("aktif");
+        if (buka) document.getElementById("profil").scrollIntoView({ behavior: "smooth" });
+      } else {
+        const buka = !barTrans.classList.contains("tampil");
+        barTrans.classList.toggle("tampil", buka);
+        btnTrans.classList.toggle("aktif", buka);
+        barProfil.classList.remove("tampil");
+        btnProfil.classList.remove("aktif");
+        if (buka) document.getElementById("transparansi").scrollIntoView({ behavior: "smooth" });
+      }
+    }
+
+    function tutupSemuaSubBar() {
+      document.getElementById("subProfilBar").classList.remove("tampil");
+      document.getElementById("btnMenuProfil").classList.remove("aktif");
+      document.getElementById("subTransparansiBar").classList.remove("tampil");
+      document.getElementById("btnMenuTransparansi").classList.remove("aktif");
+    }
+
+    function bukaDetailProfil(key) {
+      daftarPanelProfil.forEach((item) => {
+        document.getElementById("panel-" + item).classList.toggle("terbuka", item === key);
+        document.getElementById("sub-" + item).classList.toggle("aktif-sub", item === key);
+      });
+      document.getElementById("profil").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function bukaTabTransparansi(tabKey) {
+      daftarTabTransparansi.forEach((key) => {
+        document.getElementById("panel-tr-" + key).classList.toggle("terbuka", key === tabKey);
+        document.getElementById("sub-tr-" + key).classList.toggle("aktif-sub", key === tabKey);
+      });
+
+      if (tabKey === "grafik") {
+        renderSemuaGrafik();
+      }
+
+      document.getElementById("transparansi").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function ambilSheetGViz(namaSheet) {
+      return new Promise((resolve, reject) => {
+        const namaCallback = "gvizCb_" + namaSheet.replace(/[^a-zA-Z0-9]/g, "_") + "_" + Math.floor(Math.random() * 100000);
+        const script = document.createElement("script");
+        const timer = setTimeout(() => {
+          cleanup();
+          reject(new Error("Timeout"));
+        }, 4500);
+
+        function cleanup() {
+          clearTimeout(timer);
+          delete window[namaCallback];
+          if (script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        window[namaCallback] = function (resp) {
+          cleanup();
+          if (!resp || !resp.table) {
+            reject(new Error("Data kosong"));
+            return;
+          }
+          const cols = resp.table.cols.map((c) => (c.label || "").trim());
+          const rows = (resp.table.rows || []).map((r) => {
+            const obj = {};
+            (r.c || []).forEach((cell, idx) => {
+              const key = cols[idx] || "col_" + idx;
+              obj[key] = cell ? (cell.f !== undefined && cell.f !== null ? cell.f : cell.v) : "";
+            });
+            return obj;
+          });
+          resolve(rows);
+        };
+
+        script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${encodeURIComponent(namaSheet)}&tqx=responseHandler:${namaCallback}&_=${Date.now()}`;
+        script.onerror = function () {
+          cleanup();
+          reject(new Error("Gagal memuat"));
+        };
+        document.body.appendChild(script);
+      });
+    }
+
+    function renderTombolBulan(containerId, mapBulan, tipe) {
+      const wadah = document.getElementById(containerId);
+      wadah.innerHTML = "";
+      const bulanTersedia = urutanBulanGlobal.filter((b) => mapBulan[b.sortKey] && mapBulan[b.sortKey].items.length > 0);
+
+      if (bulanTersedia.length === 0) {
+        wadah.innerHTML = `<span style="font-size:12px;color:#64748b;">Belum ada data bulanan.</span>`;
+        return;
+      }
+
+      bulanTersedia.forEach((b) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn-bulan";
+        btn.id = `btn-bln-${tipe}-${b.sortKey}`;
+        btn.innerText = b.label;
+        btn.onclick = () => bukaRincianBulan(tipe, b.sortKey);
+        wadah.appendChild(btn);
+      });
+    }
+
+    function bukaRincianBulan(tipe, sortKey) {
+      const wadahList = document.getElementById(
+        tipe === "cash" ? "bulanListCash" : tipe === "material" ? "bulanListMaterial" : "bulanListPengeluaran"
+      );
+      const box = document.getElementById(
+        tipe === "cash" ? "rincianBulanCash" : tipe === "material" ? "rincianBulanMaterial" : "rincianBulanPengeluaran"
+      );
+
+      const sedangAktif = document.getElementById(`btn-bln-${tipe}-${sortKey}`)?.classList.contains("aktif-bulan");
+      wadahList.querySelectorAll(".btn-bulan").forEach((el) => el.classList.remove("aktif-bulan"));
+
+      if (sedangAktif) {
+        box.classList.remove("terbuka");
+        box.innerHTML = "";
+        return;
+      }
+
+      document.getElementById(`btn-bln-${tipe}-${sortKey}`)?.classList.add("aktif-bulan");
+
+      const grup =
+        tipe === "cash"
+          ? dataCashPerBulan[sortKey]
+          : tipe === "material"
+          ? dataMaterialPerBulan[sortKey]
+          : dataPengeluaranPerBulan[sortKey];
+
+      if (!grup) return;
+
+      // Hitung subtotal bulan menggunakan rumus reduce dari item di bulan tersebut
+      const subtotalBulan = grup.items.reduce((acc, it) => {
+        const nilaiItem = tipe === "pengeluaran" ? it.jumlah : it.nominal;
+        return acc + (Number(nilaiItem) || 0);
+      }, 0);
+
+      let html = `<h3 style="font-size:14px;margin-bottom:8px;">Rincian ${grup.label}</h3><div class="tabel-wrap"><table>`;
+
+      if (tipe === "cash") {
+        html += `<thead><tr><th>Nama Donatur</th><th>Asal</th><th class="kanan">Nominal</th></tr></thead><tbody>`;
+        grup.items.forEach((it) => {
+          html += `<tr><td>${it.nama}</td><td>${it.alamat || "-"}</td><td class="kanan">${formatRupiah(it.nominal)}</td></tr>`;
+        });
+      } else if (tipe === "material") {
+        html += `<thead><tr><th>Donatur</th><th>Barang</th><th>Jumlah</th><th class="kanan">Nilai</th></tr></thead><tbody>`;
+        grup.items.forEach((it) => {
+          html += `<tr><td>${it.nama}</td><td>${it.barang}</td><td>${it.volume} ${it.satuan}</td><td class="kanan">${formatRupiah(it.nominal)}</td></tr>`;
+        });
+      } else {
+        html += `<thead><tr><th>Keperluan</th><th>Volume</th><th class="kanan">Jumlah</th></tr></thead><tbody>`;
+        grup.items.forEach((it) => {
+          html += `<tr><td>${it.barang}</td><td>${it.volume} ${it.satuan}</td><td class="kanan">${formatRupiah(it.jumlah)}</td></tr>`;
+        });
+      }
+
+      html += `</tbody></table></div><div class="subtotal-row"><span>Subtotal ${grup.label}</span><span>${formatRupiah(subtotalBulan)}</span></div>`;
+      box.innerHTML = html;
+      box.classList.add("terbuka");
+    }
+
+    function klasifikasiPengeluaran(namaBarang) {
+      const teks = String(namaBarang || "").toLowerCase();
+      if (teks.includes("tenaga") || teks.includes("tukang")) return "Tenaga Kerja";
+      if (teks.includes("konsumsi")) return "Konsumsi";
+      if (
+        teks.includes("semen") ||
+        teks.includes("besi") ||
+        teks.includes("pasir") ||
+        teks.includes("batu") ||
+        teks.includes("bata") ||
+        teks.includes("kaso") ||
+        teks.includes("papan") ||
+        teks.includes("multiplex") ||
+        teks.includes("paralon") ||
+        teks.includes("paku") ||
+        teks.includes("bendrat") ||
+        teks.includes("kawat")
+      ) {
+        return "Material";
+      }
+      return "Alat & Lainnya";
+    }
+
+    function renderSemuaGrafik() {
+      const totalCash = Object.values(dataCashPerBulan).reduce((s, b) => s + b.total, 0);
+      const totalMaterial = Object.values(dataMaterialPerBulan).reduce((s, b) => s + b.total, 0);
+
+      const kategoriKeluar = {
+        "Material": 0,
+        "Tenaga Kerja": 0,
+        "Konsumsi": 0,
+        "Alat & Lainnya": 0
+      };
+
+      Object.values(dataPengeluaranPerBulan).forEach((b) => {
+        b.items.forEach((it) => {
+          const kat = klasifikasiPengeluaran(it.barang);
+          kategoriKeluar[kat] += Number(it.jumlah) || 0;
+        });
+      });
+
+      const bulanGrafik = urutanBulanGlobal.filter((b) => b.sortKey !== 999999);
+      const labelBulan = bulanGrafik.map((b) => b.label);
+      const masukBulanan = bulanGrafik.map((b) => {
+        const c = dataCashPerBulan[b.sortKey] ? dataCashPerBulan[b.sortKey].total : 0;
+        const m = dataMaterialPerBulan[b.sortKey] ? dataMaterialPerBulan[b.sortKey].total : 0;
+        return c + m;
+      });
+      const keluarBulanan = bulanGrafik.map((b) => {
+        return dataPengeluaranPerBulan[b.sortKey] ? dataPengeluaranPerBulan[b.sortKey].total : 0;
+      });
+
+      ["chartKomposisiDonasi", "chartStrukturPengeluaran", "chartArusBulanan"].forEach((id) => {
+        if (chartInstances[id]) {
+          chartInstances[id].destroy();
+        }
+      });
+
+      chartInstances.chartKomposisiDonasi = new Chart(document.getElementById("chartKomposisiDonasi"), {
+        type: "doughnut",
+        data: {
+          labels: ["Donasi Uang (Cash/Transfer)", "Donasi Material Fisik"],
+          datasets: [{
+            data: [totalCash, totalMaterial],
+            backgroundColor: ["#166534", "#92400e"],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom" } }
+        }
+      });
+
+      chartInstances.chartStrukturPengeluaran = new Chart(document.getElementById("chartStrukturPengeluaran"), {
+        type: "doughnut",
+        data: {
+          labels: ["Material", "Tenaga Kerja", "Konsumsi", "Alat & Lainnya"],
+          datasets: [{
+            data: [
+              kategoriKeluar["Material"],
+              kategoriKeluar["Tenaga Kerja"],
+              kategoriKeluar["Konsumsi"],
+              kategoriKeluar["Alat & Lainnya"]
+            ],
+            backgroundColor: ["#c2410c", "#15803d", "#ca8a04", "#991b1b"],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom" } }
+        }
+      });
+
+      chartInstances.chartArusBulanan = new Chart(document.getElementById("chartArusBulanan"), {
+        type: "bar",
+        data: {
+          labels: labelBulan,
+          datasets: [
+            {
+              label: "Penerimaan Donasi",
+              data: masukBulanan,
+              backgroundColor: "#166534",
+              borderRadius: 4
+            },
+            {
+              label: "Pengeluaran",
+              data: keluarBulanan,
+              backgroundColor: "#c2410c",
+              borderRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom" } },
+          scales: {
+            y: {
+              ticks: {
+                callback: (v) => "Rp " + Math.round(v / 1000000) + "jt"
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function prosesDataset(rowsDonasi, rowsKeluar, sumberLabel) {
+      dataCashPerBulan = {};
+      dataMaterialPerBulan = {};
+      dataPengeluaranPerBulan = {};
+      urutanBulanGlobal = [];
+
+      rowsDonasi.forEach((r) => {
+        const jenis = String(r.Jenis || "").trim().toLowerCase();
+        const nama = String(r.Nama || "").trim();
+        const nominal = parseAngka(r.Nominal);
+        if (!nama && !nominal) return;
+
+        const infoBulan = parseKunciBulan(r.Tanggal);
+
+        if (jenis === "cash") {
+          if (!dataCashPerBulan[infoBulan.sortKey]) {
+            dataCashPerBulan[infoBulan.sortKey] = { ...infoBulan, total: 0, items: [] };
+          }
+          dataCashPerBulan[infoBulan.sortKey].items.push({
+            nama: nama || "Donatur",
+            alamat: String(r.Alamat || "").trim(),
+            nominal
+          });
+        } else if (jenis === "matrial" || jenis === "material") {
+          const vol = parseAngka(r.Volume);
+          const hSat = parseAngka(r.HargaSatuan);
+          const nilai = nominal > 0 ? nominal : vol * hSat;
+
+          if (!dataMaterialPerBulan[infoBulan.sortKey]) {
+            dataMaterialPerBulan[infoBulan.sortKey] = { ...infoBulan, total: 0, items: [] };
+          }
+          dataMaterialPerBulan[infoBulan.sortKey].items.push({
+            nama: nama || "Donatur",
+            barang: String(r.NamaBarang || "-").trim(),
+            volume: r.Volume || "-",
+            satuan: String(r.Satuan || "").trim(),
+            nominal: nilai
+          });
+        }
+      });
+
+      rowsKeluar.forEach((r) => {
+        const barang = String(r.NamaBarang || "").trim();
+        const jumlah = parseAngka(r.JumlahHarga) || (parseAngka(r.Volume) * parseAngka(r.HargaSatuan));
+        if (!barang && !jumlah) return;
+
+        const infoBulan = parseKunciBulan(r.Tanggal);
+
+        if (!dataPengeluaranPerBulan[infoBulan.sortKey]) {
+          dataPengeluaranPerBulan[infoBulan.sortKey] = { ...infoBulan, total: 0, items: [] };
+        }
+        dataPengeluaranPerBulan[infoBulan.sortKey].items.push({
+          barang: barang || "Pengeluaran",
+          volume: r.Volume || "-",
+          satuan: String(r.Satuan || "").trim(),
+          jumlah
+        });
+      });
+
+      // Hitung total tiap bulan menggunakan rumus reduce
+      Object.values(dataCashPerBulan).forEach((b) => {
+        b.total = b.items.reduce((acc, it) => acc + (Number(it.nominal) || 0), 0);
+      });
+      Object.values(dataMaterialPerBulan).forEach((b) => {
+        b.total = b.items.reduce((acc, it) => acc + (Number(it.nominal) || 0), 0);
+      });
+      Object.values(dataPengeluaranPerBulan).forEach((b) => {
+        b.total = b.items.reduce((acc, it) => acc + (Number(it.jumlah) || 0), 0);
+      });
+
+      catatBulan(dataCashPerBulan);
+      catatBulan(dataMaterialPerBulan);
+      catatBulan(dataPengeluaranPerBulan);
+
+      // Rumus utama rekapitulasi global
+      const totalCash = Object.values(dataCashPerBulan).reduce((s, b) => s + b.total, 0);
+      const totalMaterial = Object.values(dataMaterialPerBulan).reduce((s, b) => s + b.total, 0);
+      const totalPemasukan = totalCash + totalMaterial;
+      const totalPengeluaran = Object.values(dataPengeluaranPerBulan).reduce((s, b) => s + b.total, 0);
+      const saldoAnggaran = totalPemasukan - totalPengeluaran;
+      const persenRAB = ((totalPemasukan / TARGET_RAB) * 100).toFixed(1);
+
+      document.getElementById("globalCash").innerText = formatRupiah(totalCash);
+      document.getElementById("globalMaterial").innerText = formatRupiah(totalMaterial);
+      document.getElementById("globalPemasukan").innerText = formatRupiah(totalPemasukan);
+      document.getElementById("globalPersenRAB").innerText = `${persenRAB}% dari Target RAB Rp 665.684.000`;
+      document.getElementById("globalPengeluaran").innerText = formatRupiah(totalPengeluaran);
+
+      const kartuSaldo = document.getElementById("kartuSaldoAnggaran");
+      const labelSaldo = document.getElementById("labelSaldoAnggaran");
+      document.getElementById("globalSaldoAnggaran").innerText = formatRupiah(saldoAnggaran);
+      if (saldoAnggaran < 0) {
+        kartuSaldo.classList.add("defisit");
+        labelSaldo.innerText = "Defisit Anggaran";
+      } else {
+        kartuSaldo.classList.remove("defisit");
+        labelSaldo.innerText = "Saldo Anggaran";
+      }
+
+      document.getElementById("tabTotalCash").innerText = formatRupiah(totalCash);
+      document.getElementById("tabTotalMaterial").innerText = formatRupiah(totalMaterial);
+      document.getElementById("tabTotalPengeluaran").innerText = formatRupiah(totalPengeluaran);
+
+      renderTombolBulan("bulanListCash", dataCashPerBulan, "cash");
+      renderTombolBulan("bulanListMaterial", dataMaterialPerBulan, "material");
+      renderTombolBulan("bulanListPengeluaran", dataPengeluaranPerBulan, "pengeluaran");
+
+      if (document.getElementById("panel-tr-grafik").classList.contains("terbuka")) {
+        renderSemuaGrafik();
+      }
+
+      document.getElementById("statusSinkron").innerText = sumberLabel;
+    }
+
+    async function muatDataTransparansi(manual = false) {
+      const statusEl = document.getElementById("statusSinkron");
+      if (manual) statusEl.innerText = "Memuat ulang data dari spreadsheet...";
+
+      // Tampilkan data awal terhitung rumus agar tidak nyangkut di Rp 0
+      prosesDataset(FALLBACK_DONASI, FALLBACK_PENGELUARAN, "Menghubungkan ke spreadsheet...");
+
+      try {
+        const [rowsDonasi, rowsKeluar] = await Promise.all([
+          ambilSheetGViz("Sheet1"),
+          ambilSheetGViz("Pengeluaran")
+        ]);
+
+        if (rowsDonasi.length > 0 || rowsKeluar.length > 0) {
+          prosesDataset(rowsDonasi, rowsKeluar, "Tersinkronisasi langsung dengan spreadsheet Donasi Masjid Dua.");
+        }
+      } catch (err) {
+        prosesDataset(
+          FALLBACK_DONASI,
+          FALLBACK_PENGELUARAN,
+          "Menampilkan data rekap terhitung (koneksi langsung ke Sheets belum merespons)."
+        );
+      }
+    }
+
+    function salinRekening() {
+      const teks = document.getElementById("noRekening").innerText.trim();
+      const status = document.getElementById("statusSalin");
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(teks).then(() => {
+          status.innerText = "Tersalin!";
+          setTimeout(() => (status.innerText = ""), 2500);
+        });
+      } else {
+        const inputSementara = document.createElement("textarea");
+        inputSementara.value = teks;
+        document.body.appendChild(inputSementara);
+        inputSementara.select();
+        document.execCommand("copy");
+        document.body.removeChild(inputSementara);
+        status.innerText = "Tersalin!";
+        setTimeout(() => (status.innerText = ""), 2500);
+      }
+    }
+
+    muatDataTransparansi(false);
+  </script>
+
+</body>
+</html>
