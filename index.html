@@ -1,14 +1,13 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Transparansi Pembangunan Masjid</title>
   <style>
     :root {
       --primary: #059669;
       --primary-dark: #065f46;
-      --accent: #d97706;
       --bg: #f3f4f6;
       --card: #ffffff;
       --text: #1f2937;
@@ -16,435 +15,216 @@
       --border: #e5e7eb;
     }
 
-    * {
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
 
     body {
       margin: 0;
-      padding: 0 0 96px;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding-top: 70px; /* Ruang untuk navbar tetap di atas */
+      font-family: system-ui, -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
       line-height: 1.5;
     }
 
-    .container {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 18px 15px;
+    /* TOP NAVBAR DENGAN DROPDOWN */
+    .top-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 12px 10px;
+      z-index: 1000;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 
-    /* HEADER / BERANDA */
-    .hero {
-      background: linear-gradient(135deg, #065f46, #059669);
-      color: #ffffff;
-      border-radius: 14px;
-      padding: 20px 18px;
-      margin-bottom: 18px;
-      box-shadow: 0 4px 12px rgba(5, 150, 105, 0.18);
-    }
-
-    .hero-badge {
-      display: inline-block;
-      font-size: 0.75rem;
+    .nav-item { position: relative; }
+    .nav-link {
+      text-decoration: none;
+      color: var(--text);
       font-weight: 600;
-      background: rgba(255, 255, 255, 0.18);
-      padding: 3px 10px;
-      border-radius: 999px;
-      margin-bottom: 8px;
-    }
-
-    .hero h1 {
-      margin: 0 0 6px;
-      font-size: 1.35rem;
-      line-height: 1.3;
-    }
-
-    .hero p {
-      margin: 0;
       font-size: 0.9rem;
-      color: #ecfdf5;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
+    .nav-link:hover, .nav-link:active { color: var(--primary); }
 
-    /* SECTION & CARD */
-    section {
-      margin-bottom: 20px;
-      scroll-margin-top: 16px;
-    }
-
-    .section-title {
-      font-size: 1.15rem;
-      margin: 0 0 10px;
-      color: var(--primary-dark);
-    }
-
-    .card-box {
+    .dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 14px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-    }
-
-    .progres-header,
-    .sub-header,
-    .kebutuhan-header,
-    .rab-summary,
-    .rek-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .progres-label {
-      font-weight: 700;
-      font-size: 0.95rem;
-    }
-
-    .progres-percent {
-      font-weight: 800;
-      font-size: 1.15rem;
-      color: var(--primary);
-    }
-
-    /* PROGRESS BAR */
-    .progress-track {
-      width: 100%;
-      background: #e5e7eb;
-      border-radius: 999px;
-      overflow: hidden;
-      margin: 8px 0;
-    }
-
-    .main-track {
-      height: 14px;
-    }
-
-    .sub-track {
-      height: 8px;
-    }
-
-    .progress-fill {
-      height: 100%;
-      width: 0%;
-      background: #10b981;
-      border-radius: 999px;
-      transition: width 0.45s ease;
-    }
-
-    .progress-fill.active {
-      background: #f59e0b;
-    }
-
-    .progres-note {
-      font-size: 0.84rem;
-      color: #4b5563;
-      margin: 6px 0 12px;
-    }
-
-    /* COLLAPSIBLE TAHAPAN */
-    .sub-details {
-      border-top: 1px dashed #d1d5db;
-      padding-top: 10px;
-    }
-
-    .details-toggle {
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 0.9rem;
-      color: var(--primary);
-      user-select: none;
-    }
-
-    .sub-list {
-      margin-top: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .sub-item {
-      background: #f9fafb;
-      border: 1px solid #f3f4f6;
-      padding: 10px 12px;
       border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      min-width: 160px;
+      padding: 8px 0;
     }
+    .nav-item:hover .dropdown { display: block; }
+    .dropdown a {
+      display: block;
+      padding: 8px 16px;
+      text-decoration: none;
+      color: var(--text);
+      font-size: 0.85rem;
+    }
+    .dropdown a:hover { background: #f0fdf4; color: var(--primary); }
 
-    .sub-item-title {
-      font-weight: 600;
-      font-size: 0.88rem;
-    }
+    /* LAYOUT UTAMA */
+    .container { max-width: 720px; margin: 0 auto; padding: 16px; }
+    section { margin-bottom: 32px; scroll-margin-top: 80px; }
+    .section-title { font-size: 1.25rem; margin-bottom: 12px; color: var(--primary-dark); border-bottom: 2px solid var(--primary); padding-bottom: 6px; }
+    .card-box { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
 
-    .sub-item-desc {
-      font-size: 0.8rem;
-      color: #4b5563;
-      margin-top: 4px;
-    }
+    /* HERO SECTION */
+    .hero { background: linear-gradient(135deg, #065f46, #059669); color: #fff; border-radius: 12px; padding: 24px 16px; }
+    .hero h1 { margin: 0 0 8px; font-size: 1.5rem; }
+    .hero p { margin: 0; font-size: 0.95rem; opacity: 0.9; }
 
-    .badge-done {
-      font-size: 0.74rem;
-      background: #d1fae5;
-      color: #065f46;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-weight: 600;
-      white-space: nowrap;
-    }
+    /* PROGRESS BAR STYLES */
+    .progres-header, .sub-header, .kebutuhan-header, .rab-summary { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .progres-label { font-weight: 700; font-size: 0.95rem; }
+    .progres-percent { font-weight: 800; font-size: 1.15rem; color: var(--primary); }
+    .progress-track { width: 100%; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin: 8px 0; }
+    .main-track { height: 14px; }
+    .sub-track { height: 8px; }
+    .progress-fill { height: 100%; background: #10b981; border-radius: 999px; transition: width 0.5s ease; width: 0%; }
+    .progress-fill.active { background: #f59e0b; }
+    .progres-note { font-size: 0.85rem; color: var(--muted); margin: 6px 0 12px; }
 
-    .badge-active {
-      font-size: 0.74rem;
-      background: #fef3c7;
-      color: #92400e;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-weight: 600;
-      white-space: nowrap;
-    }
-
-    .badge-wait {
-      font-size: 0.74rem;
-      background: #e5e7eb;
-      color: #4b5563;
-      padding: 2px 8px;
-      border-radius: 999px;
-      white-space: nowrap;
-    }
+    /* COLLAPSIBLE SUB-BARS */
+    .sub-details { border-top: 1px dashed #d1d5db; padding-top: 12px; }
+    .details-toggle { cursor: pointer; font-weight: 600; font-size: 0.9rem; color: var(--primary); user-select: none; }
+    .sub-list { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+    .sub-item { background: #f9fafb; padding: 10px 12px; border-radius: 8px; border: 1px solid #f3f4f6; }
+    .sub-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .sub-title { font-weight: 600; font-size: 0.88rem; }
+    .badge-done { font-size: 0.75rem; background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 99px; font-weight: 600; }
+    .badge-active { font-size: 0.75rem; background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 99px; font-weight: 600; }
+    .badge-wait { font-size: 0.75rem; background: #e5e7eb; color: var(--muted); padding: 2px 8px; border-radius: 99px; }
+    .sub-desc { font-size: 0.8rem; color: var(--muted); }
 
     /* KEBUTUHAN TERKINI */
-    .kebutuhan-header h3 {
-      margin: 0;
-      font-size: 1.05rem;
-      color: #111827;
-    }
+    .kebutuhan-header h3 { margin: 0; font-size: 1.1rem; }
+    .rab-tag { font-size: 0.78rem; background: #ecfdf5; color: #047857; padding: 4px 8px; border-radius: 6px; font-weight: 600; }
+    .kebutuhan-desc { font-size: 0.85rem; color: var(--muted); margin: 8px 0 16px; }
+    .material-list { display: flex; flex-direction: column; gap: 8px; }
+    .mat-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.88rem; }
+    .mat-item.available { background: #f0fdf4; border-color: #bbf7d0; }
+    .mat-item small { display: block; color: var(--muted); font-size: 0.78rem; }
+    .status-ok { font-size: 0.75rem; font-weight: 700; color: #059669; background: #d1fae5; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
+    .status-need { font-size: 0.75rem; font-weight: 600; color: #b45309; background: #fef3c7; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
 
-    .rab-tag {
-      font-size: 0.78rem;
-      background: #ecfdf5;
-      color: #047857;
-      padding: 3px 8px;
-      border-radius: 6px;
-      font-weight: 600;
-      white-space: nowrap;
-    }
+    .rab-summary { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+    .rab-summary small { display: block; color: var(--muted); font-size: 0.76rem; }
+    .rab-summary strong { font-size: 1rem; }
+    .text-highlight { color: #d97706; }
 
-    .kebutuhan-desc {
-      font-size: 0.85rem;
-      color: #4b5563;
-      margin: 8px 0 12px;
-    }
+    .btn-action { display: block; text-align: center; background: var(--primary); color: #fff; text-decoration: none; font-weight: 600; font-size: 0.95rem; padding: 12px; border-radius: 8px; margin-top: 16px; }
+    .btn-action:active { background: var(--primary-dark); }
 
-    .material-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .mat-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 0.86rem;
-    }
-
-    .mat-item.available {
-      background: #f0fdf4;
-      border-color: #bbf7d0;
-    }
-
-    .mat-item small {
-      display: block;
-      color: var(--muted);
-      font-size: 0.78rem;
-      margin-top: 2px;
-    }
-
-    .status-ok {
-      font-size: 0.74rem;
-      font-weight: 700;
-      color: #059669;
-      background: #d1fae5;
-      padding: 3px 8px;
-      border-radius: 6px;
-      white-space: nowrap;
-    }
-
-    .status-need {
-      font-size: 0.74rem;
-      font-weight: 600;
-      color: #b45309;
-      background: #fef3c7;
-      padding: 3px 8px;
-      border-radius: 6px;
-      white-space: nowrap;
-    }
-
-    .rab-summary {
-      margin-top: 14px;
-      padding-top: 12px;
-      border-top: 1px solid var(--border);
-    }
-
-    .rab-summary small {
-      display: block;
-      font-size: 0.76rem;
-      color: var(--muted);
-    }
-
-    .rab-summary strong {
-      font-size: 0.98rem;
-    }
-
-    .text-highlight {
-      color: var(--accent);
-    }
-
-    .btn-primary,
-    .btn-copy {
-      display: inline-block;
-      background: var(--primary);
-      color: #ffffff;
-      border: none;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 0.9rem;
-      padding: 11px 14px;
-      border-radius: 8px;
-      cursor: pointer;
-      text-align: center;
-    }
-
-    .btn-primary {
-      display: block;
-      width: 100%;
-      margin-top: 14px;
-    }
-
-    .btn-copy {
-      padding: 7px 12px;
-      font-size: 0.8rem;
-    }
-
-    .btn-primary:active,
-    .btn-copy:active {
-      background: var(--primary-dark);
-    }
-
-    /* LAPORAN & DONASI */
-    .info-text {
-      margin: 0 0 10px;
-      font-size: 0.88rem;
-      color: #374151;
-    }
-
-    .rek-box {
-      background: #f9fafb;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px;
-      margin-top: 10px;
-    }
-
-    .rek-number {
-      font-size: 1rem;
-      font-weight: 700;
-      color: #111827;
-      margin: 2px 0;
-    }
-
-    .rek-note {
-      font-size: 0.78rem;
-      color: var(--muted);
-    }
-
-    .sync-status {
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-top: 8px;
-    }
-
-    /* FLOATING NAVBAR NETRAL (TANPA SUB-MENU) */
-    .floating-nav {
-      position: fixed;
-      bottom: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.96);
-      backdrop-filter: blur(8px);
-      border: 1px solid var(--border);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-      border-radius: 999px;
-      padding: 8px 16px;
-      display: flex;
-      gap: 14px;
-      z-index: 999;
-      max-width: calc(100% - 24px);
-    }
-
-    .floating-nav a {
-      text-decoration: none;
-      color: #374151;
-      font-size: 0.84rem;
-      font-weight: 600;
-      padding: 4px 6px;
-      white-space: nowrap;
-    }
-
-    .floating-nav a:hover,
-    .floating-nav a:active {
-      color: var(--primary);
-    }
+    /* ELEMEN UMUM LAINNYA */
+    .content-block { margin-bottom: 16px; }
+    .content-block h4 { margin: 0 0 4px; font-size: 0.95rem; }
+    .content-block p { margin: 0; font-size: 0.85rem; color: #374151; }
+    .rek-box { background: #f9fafb; border: 1px solid var(--border); border-radius: 10px; padding: 14px; display: flex; justify-content: space-between; align-items: center; }
+    .rek-info div:first-child { font-weight: 700; font-size: 1.05rem; letter-spacing: 0.5px; }
+    .rek-info div:last-child { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
+    .btn-copy { background: #e0e7ff; color: #4338ca; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+    .sync-status { font-size: 0.75rem; color: var(--muted); text-align: center; margin-top: 12px; }
   </style>
 </head>
 <body>
+
+  <!-- TOP NAVBAR DENGAN DROPDOWN -->
+  <nav class="top-nav">
+    <div class="nav-item">
+      <a href="#beranda" class="nav-link">Beranda ▾</a>
+      <div class="dropdown">
+        <a href="#profil-singkat">Profil Singkat</a>
+        <a href="#susunan-panitia">Susunan Panitia</a>
+        <a href="#sejarah-singkat">Sejarah Singkat</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <a href="#progres-pembangunan" class="nav-link">Progres</a>
+    </div>
+    <div class="nav-item">
+      <a href="#laporan" class="nav-link">Laporan ▾</a>
+      <div class="dropdown">
+        <a href="#laporan-dana-masuk">Pemasangan Kas</a>
+        <a href="#laporan-pengeluaran">Pengeluaran Bahan</a>
+        <a href="#catatan-pekerjaan">Catatan Harian</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <a href="#donasi" class="nav-link">Donasi</a>
+    </div>
+  </nav>
+
   <div class="container">
-    <!-- 1. BERANDA -->
-    <header id="beranda" class="hero">
-      <span class="hero-badge">Transparansi Pembangunan</span>
-      <h1>Pembangunan Masjid</h1>
-      <p>Ringkasan progres fisik, kebutuhan material terkini, laporan kas, dan informasi penyaluran donasi.</p>
-    </header>
+    
+    <!-- 1. BERANDA & SUB-BAGIAN -->
+    <section id="beranda">
+      <div class="hero">
+        <h1>Pembangunan Masjid</h1>
+        <p>Transparansi perkembangan pembangunan, pengelolaan dana, dan kebutuhan material terkini.</p>
+      </div>
 
-    <!-- 2. PROGRES & KEBUTUHAN TERKINI -->
+      <div id="profil-singkat" class="card-box content-block">
+        <h4>Profil Singkat</h4>
+        <p>Masjid kebanggaan warga yang sedang dalam tahap pengembangan kapasitas untuk kenyamanan beribadah jamaah.</p>
+      </div>
+
+      <div id="susunan-panitia" class="card-box content-block">
+        <h4>Susunan Panitia</h4>
+        <p>Dikelola secara transparan dan amanah oleh panitia pembangunan yang terdiri dari tokoh masyarakat dan teknisi ahli.</p>
+      </div>
+
+      <div id="sejarah-singkat" class="card-box content-block">
+        <h4>Sejarah Singkat</h4>
+        <p>Berawal dari musyawarah warga, pembangunan ini diniatkan untuk menampung jamaah yang kian bertambah.</p>
+      </div>
+    </section>
+
+    <!-- 2. PROGRES PEMBANGUNAN & KEBUTUHAN TERKINI -->
     <section id="progres-pembangunan">
-      <h2 class="section-title">Progres Pembangunan Masjid</h2>
-
-      <!-- BAR PROGRES UTAMA -->
+      <h2 class="section-title">Progres Pembangunan</h2>
+      
+      <!-- Bar Progres Utama -->
       <div class="card-box">
         <div class="progres-header">
           <span class="progres-label">Total Progres Fisik Keseluruhan</span>
-          <span class="progres-percent" id="total-persen-text">52%</span>
+          <span class="progres-percent" id="total-persen-text">53%</span>
         </div>
         <div class="progress-track main-track">
-          <div class="progress-fill" id="total-persen-bar" style="width: 52%;"></div>
+          <div class="progress-fill" id="total-persen-bar" style="width: 53%;"></div>
         </div>
         <p class="progres-note">Status saat ini: Pengumpulan material pengecoran dak atap (10m x 18m).</p>
 
-        <!-- SUB-BAR PER TAHAPAN -->
-        <details class="sub-details">
+        <!-- Sub-Bar per Tahapan -->
+        <details class="sub-details" open>
           <summary class="details-toggle">Lihat Rincian Per Tahap Pekerjaan</summary>
           <div class="sub-list" id="container-tahapan"></div>
         </details>
       </div>
 
-      <!-- KEBUTUHAN TERKINI -->
+      <!-- Kebutuhan Terkini -->
       <div class="card-box">
         <div class="kebutuhan-header">
           <h3>Kebutuhan Terkini: Material Dak</h3>
           <span class="rab-tag" id="total-rab-tag">Estimasi: Rp 52.500.000</span>
         </div>
         <p class="kebutuhan-desc">
-          Saat ini panitia sedang menghimpun material untuk pengecoran dak atap. Bapak/Ibu dapat berpartisipasi dalam bentuk material maupun dana:
+          Panitia sedang menghimpun material untuk pengecoran dak atap. Partisipasi dapat disalurkan dalam bentuk material maupun dana:
         </p>
 
         <div class="material-list" id="container-material"></div>
@@ -460,21 +240,28 @@
           </div>
         </div>
 
-        <a href="#donasi" class="btn-primary">Salurkan Donasi Material Dak</a>
+        <a href="#donasi" class="btn-action">Salurkan Donasi Material Dak</a>
         <div class="sync-status" id="sync-status">Menampilkan data awal (hubungkan link CSV Sheets untuk pembaruan otomatis).</div>
       </div>
     </section>
 
-    <!-- 3. LAPORAN KEUANGAN -->
+    <!-- 3. LAPORAN & SUB-BAGIAN -->
     <section id="laporan">
-      <h2 class="section-title">Laporan & Rekapitulasi</h2>
-      <div class="card-box">
-        <p class="info-text">
-          Seluruh pemasukan kas, konversi donasi material, dan pengeluaran pembangunan dicatat secara berkala oleh panitia.
-        </p>
-        <p class="info-text" style="margin-bottom:0; color:#6b7280; font-size:0.83rem;">
-          Catatan: Angka pada bagian <strong>Kebutuhan Terkini</strong> di atas mengacu pada rencana kebutuhan material dak atap 10m x 18m.
-        </p>
+      <h2 class="section-title">Laporan Keuangan & Kegiatan</h2>
+      
+      <div id="laporan-dana-masuk" class="card-box content-block">
+        <h4>Laporan Dana Masuk</h4>
+        <p>Rekapitulasi infak, sedekah, dan wakaf material yang telah diterima dari para donatur.</p>
+      </div>
+
+      <div id="laporan-pengeluaran" class="card-box content-block">
+        <h4>Pengeluaran Bahan</h4>
+        <p>Catatan transparansi penggunaan dana untuk pembelian material dan operasional tukang.</p>
+      </div>
+
+      <div id="catatan-pekerjaan" class="card-box content-block">
+        <h4>Catatan Harian</h4>
+        <p>Log aktivitas harian pekerjaan fisik di lapangan oleh tim konstruksi.</p>
       </div>
     </section>
 
@@ -482,41 +269,30 @@
     <section id="donasi">
       <h2 class="section-title">Salurkan Donasi</h2>
       <div class="card-box">
-        <p class="info-text">
-          Untuk dukungan material dak (bondek, besi 10mm, semen, pasir cor) atau dana pembangunan, silakan gunakan rekening resmi panitia di bawah ini:
+        <p style="font-size: 0.9rem; margin-bottom: 16px;">
+          Mari bersama menyelesaikan pembangunan rumah Allah. Dukungan dapat disalurkan melalui rekening resmi berikut:
         </p>
+        
         <div class="rek-box">
-          <div class="rek-row">
-            <div>
-              <div class="rek-note">Rekening Pembangunan Masjid (Sesuaikan Nama Bank & a.n.)</div>
-              <div class="rek-number" id="no-rekening">0000-00-000000-00-0</div>
-              <div class="rek-note">a.n. Panitia Pembangunan Masjid</div>
-            </div>
-            <button type="button" class="btn-copy" onclick="salinRekening()">Salin</button>
+          <div class="rek-info">
+            <div>7182930495</div>
+            <div>Bank Syariah Indonesia (BSI) a.n. Panitia Pembangunan Masjid</div>
           </div>
+          <button class="btn-copy" onclick="salinRekening('7182930495')">Salin</button>
         </div>
       </div>
     </section>
   </div>
 
-  <!-- FLOATING NAVBAR NETRAL (TANPA SUB-MENU) -->
-  <nav class="floating-nav" aria-label="Navigasi utama">
-    <a href="#beranda">Beranda</a>
-    <a href="#progres-pembangunan">Progres</a>
-    <a href="#laporan">Laporan</a>
-    <a href="#donasi">Donasi</a>
-  </nav>
-
   <script>
-    // Opsional: ganti dengan link CSV dari tab "Progres_Dak" Google Sheets (Publish to web -> CSV)
+    // GANTI DENGAN LINK CSV DARI GOOGLE SHEETS
     const SHEET_CSV_URL = "MASUKKAN_LINK_CSV_GOOGLE_SHEETS_DI_SINI";
 
-    // Data awal sesuai rincian terkini (otomatis terpakai jika link CSV belum diisi)
     const DATA_AWAL = [
-      { nama: "Tahap 1: Tanah & Pondasi", kategori: "tahap", target: 100, terkumpul: 100, satuan: "%", harga: 0 },
+      { nama: "Tahap 1: Tanah, Pondasi & Tempat Wudu", kategori: "tahap", target: 100, terkumpul: 100, satuan: "%", harga: 0 },
       { nama: "Tahap 2: Struktur Badan & Serambi", kategori: "tahap", target: 100, terkumpul: 100, satuan: "%", harga: 0 },
       { nama: "Tahap 3: Dak Atap & Kubah", kategori: "tahap", target: 100, terkumpul: 10, satuan: "%", harga: 0 },
-      { nama: "Tahap 4: Finishing & Masjid Lama", kategori: "tahap", target: 100, terkumpul: 0, satuan: "%", harga: 0 },
+      { nama: "Tahap 4: Finishing & Area Masjid Lama", kategori: "tahap", target: 100, terkumpul: 0, satuan: "%", harga: 0 },
       { nama: "Batu Split", kategori: "material", target: 10, terkumpul: 10, satuan: "m³", harga: 300000 },
       { nama: "Bondek", kategori: "material", target: 30, terkumpul: 0, satuan: "lembar", harga: 700000 },
       { nama: "Besi 10mm", kategori: "material", target: 150, terkumpul: 0, satuan: "batang", harga: 90000 },
@@ -525,10 +301,10 @@
     ];
 
     const DETAIL_PEKERJAAN = {
-      "Tahap 1: Tanah & Pondasi": "Pondasi masjid, perataan (urug pondasi), dan tempat wudu selesai.",
-      "Tahap 2: Struktur Badan & Serambi": "Pilar & bata merah badan utama, serambi, serta sloof atas & sloof gantung selesai.",
-      "Tahap 3: Dak Atap & Kubah": "Pengumpulan material pengecoran dak atap; pemasangan kubah menyusul.",
-      "Tahap 4: Finishing & Masjid Lama": "Plester & acian, plafon & keramik, serta pembongkaran masjid lama."
+      "Tahap 1: Tanah, Pondasi & Tempat Wudu": "✅ Pondasi & perataan urug pondasi terkumpul • ✅ Tempat wudu selesai.",
+      "Tahap 2: Struktur Badan & Serambi": "✅ Pilar & bata merah utama • ✅ Area serambi • ✅ Sloof atas & gantung.",
+      "Tahap 3: Dak Atap & Kubah": "🔄 Pengecoran dak atap (pengadaan material) • ⏳ Pemasangan kubah.",
+      "Tahap 4: Finishing & Area Masjid Lama": "⏳ Plester dinding & acian • ⏳ Plafon & keramik • ⏳ Pembongkaran masjid lama."
     };
 
     const formatRupiah = (angka) => "Rp " + Number(angka || 0).toLocaleString("id-ID");
@@ -554,32 +330,20 @@
           totalPersenTahap += persen;
           jumlahTahap++;
 
-          let badgeClass = "badge-wait";
-          let badgeText = `${persen}% (Berikutnya)`;
-          let fillClass = "";
-
-          if (persen === 100) {
-            badgeClass = "badge-done";
-            badgeText = "100% Selesai";
-          } else if (persen > 0) {
-            badgeClass = "badge-active";
-            badgeText = `${persen}% Berjalan`;
-            fillClass = "active";
-          }
+          let badgeClass = "badge-wait", badgeText = `${persen}% (Berikutnya)`, fillClass = "";
+          if (persen === 100) { badgeClass = "badge-done"; badgeText = "100% Selesai"; }
+          else if (persen > 0) { badgeClass = "badge-active"; badgeText = `${persen}% Berjalan`; fillClass = "active"; }
 
           const rincian = DETAIL_PEKERJAAN[nama] || "";
           htmlTahap += `
             <div class="sub-item">
-              <div class="sub-header">
-                <span class="sub-item-title">${nama}</span>
+              <div class="sub-item-header">
+                <span class="sub-title">${nama}</span>
                 <span class="${badgeClass}">${badgeText}</span>
               </div>
-              <div class="progress-track sub-track">
-                <div class="progress-fill ${fillClass}" style="width: ${persen}%;"></div>
-              </div>
-              ${rincian ? `<div class="sub-item-desc">${rincian}</div>` : ""}
-            </div>
-          `;
+              <div class="progress-track sub-track"><div class="progress-fill ${fillClass}" style="width: ${persen}%;"></div></div>
+              ${rincian ? `<div class="sub-desc">${rincian}</div>` : ""}
+            </div>`;
         } else if (kategori === "material" && target > 0) {
           const anggaranItem = target * harga;
           const terkumpulAman = Math.min(target, Math.max(0, terkumpul));
@@ -595,14 +359,13 @@
             : `<span class="status-need">Kurang ${sisaItem} ${satuan}</span>`;
 
           htmlMaterial += `
-            <div class="mat-item ${isLunas ? "available" : ""}">
+            <div class="mat-item ${isLunas ? 'available' : ''}">
               <div>
                 <strong>${nama} (${target} ${satuan})</strong>
                 <small>${formatRupiah(harga)} / ${satuan} • Total ${formatRupiah(anggaranItem)}</small>
               </div>
               ${statusBadge}
-            </div>
-          `;
+            </div>`;
         }
       });
 
@@ -631,18 +394,9 @@
       const parsed = [];
       for (const line of lines) {
         if (!line.trim()) continue;
-        const cols = line
-          .split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
-          .map((c) => c.replace(/^"|"$/g, "").trim());
+        const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/^"|"$/g, "").trim());
         if (cols.length >= 6) {
-          parsed.push({
-            nama: cols[0],
-            kategori: cols[1],
-            target: cols[2],
-            terkumpul: cols[3],
-            satuan: cols[4],
-            harga: cols[5]
-          });
+          parsed.push({ nama: cols[0], kategori: cols[1], target: cols[2], terkumpul: cols[3], satuan: cols[4], harga: cols[5] });
         }
       }
       return parsed;
@@ -650,37 +404,28 @@
 
     async function muatData() {
       renderTampilan(DATA_AWAL, false);
-
       if (!SHEET_CSV_URL || SHEET_CSV_URL.includes("MASUKKAN_LINK")) return;
-
       try {
         const resp = await fetch(SHEET_CSV_URL, { cache: "no-store" });
-        if (!resp.ok) throw new Error("Respon jaringan tidak OK");
+        if (!resp.ok) throw new Error("Gagal mengambil data");
         const csvText = await resp.text();
         const parsed = parseCSV(csvText);
-        if (parsed.length > 0) {
-          renderTampilan(parsed, true);
-        }
+        if (parsed.length > 0) renderTampilan(parsed, true);
       } catch (e) {
-        console.warn("Menggunakan data awal:", e);
+        console.warn("Gagal sinkronisasi, menggunakan data awal:", e);
       }
     }
 
-    function salinRekening() {
-      const rek = document.getElementById("no-rekening").textContent.trim();
+    function salinRekening(rek) {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(rek).then(() => {
-          alert("Nomor rekening disalin: " + rek);
-        }).catch(() => {
-          prompt("Salin nomor rekening berikut:", rek);
-        });
+        navigator.clipboard.writeText(rek).then(() => alert("Nomor rekening disalin: " + rek));
       } else {
-        prompt("Salin nomor rekening berikut:", rek);
+        alert("Salin manual nomor rekening: " + rek);
       }
     }
 
     document.addEventListener("DOMContentLoaded", muatData);
   </script>
 </body>
-  </html>
-  
+        </html>
+    
