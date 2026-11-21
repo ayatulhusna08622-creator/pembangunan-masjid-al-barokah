@@ -657,4 +657,537 @@
 
     const daftarPanelProfil = ["nama-alamat", "latar-rencana", "lahan-legalitas", "panitia"];
     const daftarTabTransparansi = ["cash", "material", "pengeluaran", "grafik"];
-    const namaBulanSingkat = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov"
+    const namaBulanSingkat = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+
+    let dataCashPerBulan = {};
+    let dataMaterialPerBulan = {};
+    let dataPengeluaranPerBulan = {};
+    let urutanBulanGlobal = [];
+    let chartInstances = {};
+
+    function formatRupiah(angka) {
+      const nilaiBulat = Math.round(Number(angka) || 0);
+      const tandaMinus = nilaiBulat < 0 ? "-Rp " : "Rp ";
+      return tandaMinus + Math.abs(nilaiBulat).toLocaleString("id-ID");
+    }
+
+    function parseAngka(val) {
+      if (typeof val === "number") return isNaN(val) ? 0 : val;
+      if (!val) return 0;
+      const bersih = String(val).replace(/[^\d,-]/g, "").replace(/\./g, "").replace(",", ".");
+      const num = parseFloat(bersih);
+      return isNaN(num) ? 0 : num;
+    }
+
+    function parseKunciBulan(tglStr) {
+      if (!tglStr) return { sortKey: 999999, label: "Tanpa Tanggal" };
+      const str = String(tglStr).trim();
+      const matchDMY = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (matchDMY) {
+        const bulan = parseInt(matchDMY[2], 10);
+        const tahun = parseInt(matchDMY[3], 10);
+        if (bulan >= 1 && bulan <= 12) {
+          return {
+            sortKey: tahun * 100 + bulan,
+            label: `${namaBulanSingkat[bulan - 1]} ${tahun}`
+          };
+        }
+      }
+      const t = new Date(str);
+      if (!isNaN(t.getTime())) {
+        const bulan = t.getMonth() + 1;
+        const tahun = t.getFullYear();
+        return {
+          sortKey: tahun * 100 + bulan,
+          label: `${namaBulanSingkat[bulan - 1]} ${tahun}`
+        };
+      }
+      return { sortKey: 999999, label: "Tanpa Tanggal" };
+    }
+
+    function catatBulan(mapBulan) {
+      Object.values(mapBulan).forEach((item) => {
+        if (!urutanBulanGlobal.some((b) => b.sortKey === item.sortKey)) {
+          urutanBulanGlobal.push({ sortKey: item.sortKey, label: item.label });
+        }
+      });
+      urutanBulanGlobal.sort((a, b) => a.sortKey - b.sortKey);
+    }
+
+    function toggleSubBar(jenis) {
+      const barProfil = document.getElementById("subProfilBar");
+      const btnProfil = document.getElementById("btnMenuProfil");
+      const barTrans = document.getElementById("subTransparansiBar");
+      const btnTrans = document.getElementById("btnMenuTransparansi");
+
+      if (jenis === "profil") {
+        const buka = !barProfil.classList.contains("tampil");
+        barProfil.classList.toggle("tampil", buka);
+        btnProfil.classList.toggle("aktif", buka);
+        barTrans.classList.remove("tampil");
+        btnTrans.classList.remove("aktif");
+        if (buka) document.getElementById("profil").scrollIntoView({ behavior: "smooth" });
+      } else {
+        const buka = !barTrans.classList.contains("tampil");
+        barTrans.classList.toggle("tampil", buka);
+        btnTrans.classList.toggle("aktif", buka);
+        barProfil.classList.remove("tampil");
+        btnProfil.classList.remove("aktif");
+        if (buka) document.getElementById("transparansi").scrollIntoView({ behavior: "smooth" });
+      }
+    }
+
+    function tutupSemuaSubBar() {
+      document.getElementById("subProfilBar").classList.remove("tampil");
+      document.getElementById("btnMenuProfil").classList.remove("aktif");
+      document.getElementById("subTransparansiBar").classList.remove("tampil");
+      document.getElementById("btnMenuTransparansi").classList.remove("aktif");
+    }
+
+    function bukaDetailProfil(key) {
+      daftarPanelProfil.forEach((item) => {
+        document.getElementById("panel-" + item).classList.toggle("terbuka", item === key);
+        document.getElementById("sub-" + item).classList.toggle("aktif-sub", item === key);
+      });
+      document.getElementById("profil").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function bukaTabTransparansi(tabKey) {
+      daftarTabTransparansi.forEach((key) => {
+        document.getElementById("panel-tr-" + key).classList.toggle("terbuka", key === tabKey);
+        document.getElementById("sub-tr-" + key).classList.toggle("aktif-sub", key === tabKey);
+      });
+
+      if (tabKey === "grafik") {
+        renderSemuaGrafik();
+      }
+
+      document.getElementById("transparansi").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function ambilSheetGViz(namaSheet) {
+      return new Promise((resolve, reject) => {
+        const namaCallback = "gvizCb_" + namaSheet.replace(/[^a-zA-Z0-9]/g, "_") + "_" + Math.floor(Math.random() * 100000);
+        const script = document.createElement("script");
+        const timer = setTimeout(() => {
+          cleanup();
+          reject(new Error("Timeout"));
+        }, 5000);
+
+        function cleanup() {
+          clearTimeout(timer);
+          delete window[namaCallback];
+          if (script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        window[namaCallback] = function (resp) {
+          cleanup();
+          if (!resp || !resp.table) {
+            reject(new Error("Data kosong"));
+            return;
+          }
+          const cols = resp.table.cols.map((c) => (c.label || "").trim());
+          const rows = (resp.table.rows || []).map((r) => {
+            const obj = {};
+            (r.c || []).forEach((cell, idx) => {
+              const key = cols[idx] || "col_" + idx;
+              obj[key] = cell ? (cell.f !== undefined && cell.f !== null ? cell.f : cell.v) : "";
+            });
+            return obj;
+          });
+          resolve(rows);
+        };
+
+        script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${encodeURIComponent(namaSheet)}&headers=4&tqx=responseHandler:${namaCallback}&_=${Date.now()}`;
+        script.onerror = function () {
+          cleanup();
+          reject(new Error("Gagal memuat"));
+        };
+        document.body.appendChild(script);
+      });
+    }
+
+    function renderTombolBulan(containerId, mapBulan, tipe) {
+      const wadah = document.getElementById(containerId);
+      wadah.innerHTML = "";
+      const bulanTersedia = urutanBulanGlobal.filter((b) => mapBulan[b.sortKey] && mapBulan[b.sortKey].items.length > 0);
+
+      if (bulanTersedia.length === 0) {
+        wadah.innerHTML = `<span style="font-size:12px;color:#64748b;">Belum ada data bulanan.</span>`;
+        return;
+      }
+
+      bulanTersedia.forEach((b) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn-bulan";
+        btn.id = `btn-bln-${tipe}-${b.sortKey}`;
+        btn.innerText = b.label;
+        btn.onclick = () => bukaRincianBulan(tipe, b.sortKey);
+        wadah.appendChild(btn);
+      });
+    }
+
+    function bukaRincianBulan(tipe, sortKey) {
+      const wadahList = document.getElementById(
+        tipe === "cash" ? "bulanListCash" : tipe === "material" ? "bulanListMaterial" : "bulanListPengeluaran"
+      );
+      const box = document.getElementById(
+        tipe === "cash" ? "rincianBulanCash" : tipe === "material" ? "rincianBulanMaterial" : "rincianBulanPengeluaran"
+      );
+
+      const sedangAktif = document.getElementById(`btn-bln-${tipe}-${sortKey}`)?.classList.contains("aktif-bulan");
+      wadahList.querySelectorAll(".btn-bulan").forEach((el) => el.classList.remove("aktif-bulan"));
+
+      if (sedangAktif) {
+        box.classList.remove("terbuka");
+        box.innerHTML = "";
+        return;
+      }
+
+      document.getElementById(`btn-bln-${tipe}-${sortKey}`)?.classList.add("aktif-bulan");
+
+      const grup =
+        tipe === "cash"
+          ? dataCashPerBulan[sortKey]
+          : tipe === "material"
+          ? dataMaterialPerBulan[sortKey]
+          : dataPengeluaranPerBulan[sortKey];
+
+      if (!grup) return;
+
+      const subtotalBulan = grup.items.reduce((acc, it) => {
+        const nilaiItem = tipe === "pengeluaran" ? it.jumlah : it.nominal;
+        return acc + (Number(nilaiItem) || 0);
+      }, 0);
+
+      let html = `<h3 style="font-size:14px;margin-bottom:8px;">Rincian ${grup.label}</h3><div class="tabel-wrap"><table>`;
+
+      if (tipe === "cash") {
+        html += `<thead><tr><th>Nama Donatur</th><th>Metode / Asal</th><th class="kanan">Nominal</th></tr></thead><tbody>`;
+        grup.items.forEach((it) => {
+          const infoAsal = [it.metode, it.alamat].filter(Boolean).join(" - ");
+          html += `<tr><td>${it.nama}</td><td>${infoAsal || "-"}</td><td class="kanan">${formatRupiah(it.nominal)}</td></tr>`;
+        });
+      } else if (tipe === "material") {
+        html += `<thead><tr><th>Donatur</th><th>Barang</th><th>Jumlah</th><th class="kanan">Nilai</th></tr></thead><tbody>`;
+        grup.items.forEach((it) => {
+          html += `<tr><td>${it.nama}</td><td>${it.barang}</td><td>${it.volume} ${it.satuan}</td><td class="kanan">${formatRupiah(it.nominal)}</td></tr>`;
+        });
+      } else {
+        html += `<thead><tr><th>Keperluan</th><th>Volume</th><th class="kanan">Jumlah</th></tr></thead><tbody>`;
+        grup.items.forEach((it) => {
+          html += `<tr><td>${it.barang}</td><td>${it.volume} ${it.satuan}</td><td class="kanan">${formatRupiah(it.jumlah)}</td></tr>`;
+        });
+      }
+
+      html += `</tbody></table></div><div class="subtotal-row"><span>Subtotal ${grup.label}</span><span>${formatRupiah(subtotalBulan)}</span></div>`;
+      box.innerHTML = html;
+      box.classList.add("terbuka");
+    }
+
+    function klasifikasiPengeluaran(namaBarang) {
+      const teks = String(namaBarang || "").toLowerCase();
+      if (teks.includes("tenaga") || teks.includes("tukang")) return "Tenaga Kerja";
+      if (teks.includes("konsumsi")) return "Konsumsi";
+      if (
+        teks.includes("semen") ||
+        teks.includes("besi") ||
+        teks.includes("pasir") ||
+        teks.includes("batu") ||
+        teks.includes("bata") ||
+        teks.includes("kaso") ||
+        teks.includes("papan") ||
+        teks.includes("multiplex") ||
+        teks.includes("paralon") ||
+        teks.includes("paku") ||
+        teks.includes("bendrat") ||
+        teks.includes("kawat")
+      ) {
+        return "Material";
+      }
+      return "Alat & Lainnya";
+    }
+
+    function renderSemuaGrafik() {
+      const totalCash = Object.values(dataCashPerBulan).reduce((s, b) => s + b.total, 0);
+      const totalMaterial = Object.values(dataMaterialPerBulan).reduce((s, b) => s + b.total, 0);
+
+      const kategoriKeluar = {
+        "Material": 0,
+        "Tenaga Kerja": 0,
+        "Konsumsi": 0,
+        "Alat & Lainnya": 0
+      };
+
+      Object.values(dataPengeluaranPerBulan).forEach((b) => {
+        b.items.forEach((it) => {
+          const kat = klasifikasiPengeluaran(it.barang);
+          kategoriKeluar[kat] += Number(it.jumlah) || 0;
+        });
+      });
+
+      const bulanGrafik = urutanBulanGlobal.filter((b) => b.sortKey !== 999999);
+      const labelBulan = bulanGrafik.map((b) => b.label);
+      const masukBulanan = bulanGrafik.map((b) => {
+        const c = dataCashPerBulan[b.sortKey] ? dataCashPerBulan[b.sortKey].total : 0;
+        const m = dataMaterialPerBulan[b.sortKey] ? dataMaterialPerBulan[b.sortKey].total : 0;
+        return c + m;
+      });
+      const keluarBulanan = bulanGrafik.map((b) => {
+        return dataPengeluaranPerBulan[b.sortKey] ? dataPengeluaranPerBulan[b.sortKey].total : 0;
+      });
+
+      ["chartKomposisiDonasi", "chartStrukturPengeluaran", "chartArusBulanan"].forEach((id) => {
+        if (chartInstances[id]) {
+          chartInstances[id].destroy();
+        }
+      });
+
+      chartInstances.chartKomposisiDonasi = new Chart(document.getElementById("chartKomposisiDonasi"), {
+        type: "doughnut",
+        data: {
+          labels: ["Donasi Uang (Cash/Transfer)", "Donasi Material Fisik"],
+          datasets: [{
+            data: [totalCash, totalMaterial],
+            backgroundColor: ["#166534", "#92400e"],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom" } }
+        }
+      });
+
+      chartInstances.chartStrukturPengeluaran = new Chart(document.getElementById("chartStrukturPengeluaran"), {
+        type: "doughnut",
+        data: {
+          labels: ["Material", "Tenaga Kerja", "Konsumsi", "Alat & Lainnya"],
+          datasets: [{
+            data: [
+              kategoriKeluar["Material"],
+              kategoriKeluar["Tenaga Kerja"],
+              kategoriKeluar["Konsumsi"],
+              kategoriKeluar["Alat & Lainnya"]
+            ],
+            backgroundColor: ["#c2410c", "#15803d", "#ca8a04", "#991b1b"],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom" } }
+        }
+      });
+
+      chartInstances.chartArusBulanan = new Chart(document.getElementById("chartArusBulanan"), {
+        type: "bar",
+        data: {
+          labels: labelBulan,
+          datasets: [
+            {
+              label: "Penerimaan Donasi",
+              data: masukBulanan,
+              backgroundColor: "#166534",
+              borderRadius: 4
+            },
+            {
+              label: "Pengeluaran",
+              data: keluarBulanan,
+              backgroundColor: "#c2410c",
+              borderRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom" } },
+          scales: {
+            y: {
+              ticks: {
+                callback: (v) => "Rp " + Math.round(v / 1000000) + "jt"
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function prosesDataset(rowsCash, rowsMaterial, rowsKeluar, sumberLabel) {
+      dataCashPerBulan = {};
+      dataMaterialPerBulan = {};
+      dataPengeluaranPerBulan = {};
+      urutanBulanGlobal = [];
+
+      rowsCash.forEach((r) => {
+        const nama = String(r["Nama Donatur"] || r.Nama || "").trim();
+        const nominal = parseAngka(r["Nominal (Rp)"] !== undefined ? r["Nominal (Rp)"] : r.Nominal);
+        if (!nama && !nominal) return;
+        if (nama.toLowerCase().includes("total")) return;
+
+        const infoBulan = parseKunciBulan(r.Tanggal);
+        if (!dataCashPerBulan[infoBulan.sortKey]) {
+          dataCashPerBulan[infoBulan.sortKey] = { ...infoBulan, total: 0, items: [] };
+        }
+        dataCashPerBulan[infoBulan.sortKey].items.push({
+          nama: nama || "Donatur",
+          metode: String(r["Jenis / Metode"] || r.Jenis || "").trim(),
+          alamat: String(r["Alamat / Keterangan"] || r.Alamat || "").trim(),
+          nominal
+        });
+      });
+
+      rowsMaterial.forEach((r) => {
+        const nama = String(r["Nama Donatur"] || r.Nama || "").trim();
+        const barang = String(r["Nama Barang / Material"] || r.NamaBarang || "").trim();
+        const vol = parseAngka(r.Volume);
+        const hSat = parseAngka(r["Harga Satuan (Rp)"] !== undefined ? r["Harga Satuan (Rp)"] : r.HargaSatuan);
+        const totalVal = parseAngka(r["Total Nilai (Rp)"] !== undefined ? r["Total Nilai (Rp)"] : r.Nominal);
+        const nilai = totalVal > 0 ? totalVal : vol * hSat;
+
+        if (!nama && !barang && !nilai) return;
+        if (nama.toLowerCase().includes("total") || barang.toLowerCase().includes("total")) return;
+
+        const infoBulan = parseKunciBulan(r.Tanggal);
+        if (!dataMaterialPerBulan[infoBulan.sortKey]) {
+          dataMaterialPerBulan[infoBulan.sortKey] = { ...infoBulan, total: 0, items: [] };
+        }
+        dataMaterialPerBulan[infoBulan.sortKey].items.push({
+          nama: nama || "Donatur",
+          barang: barang || "-",
+          volume: r.Volume || "-",
+          satuan: String(r.Satuan || "").trim(),
+          nominal: nilai
+        });
+      });
+
+      rowsKeluar.forEach((r) => {
+        const barang = String(r["Nama Barang / Transaksi"] || r.NamaBarang || "").trim();
+        const jumlahRaw = r["Jumlah Harga (Rp)"] !== undefined ? r["Jumlah Harga (Rp)"] : r.JumlahHarga;
+        const hSatRaw = r["Harga Satuan (Rp)"] !== undefined ? r["Harga Satuan (Rp)"] : r.HargaSatuan;
+        const jumlah = parseAngka(jumlahRaw) || (parseAngka(r.Volume) * parseAngka(hSatRaw));
+
+        if (!barang && !jumlah) return;
+        if (barang.toLowerCase().includes("total")) return;
+
+        const infoBulan = parseKunciBulan(r.Tanggal);
+        if (!dataPengeluaranPerBulan[infoBulan.sortKey]) {
+          dataPengeluaranPerBulan[infoBulan.sortKey] = { ...infoBulan, total: 0, items: [] };
+        }
+        dataPengeluaranPerBulan[infoBulan.sortKey].items.push({
+          barang: barang || "Pengeluaran",
+          volume: r.Volume || "-",
+          satuan: String(r.Satuan || "").trim(),
+          jumlah
+        });
+      });
+
+      Object.values(dataCashPerBulan).forEach((b) => {
+        b.total = b.items.reduce((acc, it) => acc + (Number(it.nominal) || 0), 0);
+      });
+      Object.values(dataMaterialPerBulan).forEach((b) => {
+        b.total = b.items.reduce((acc, it) => acc + (Number(it.nominal) || 0), 0);
+      });
+      Object.values(dataPengeluaranPerBulan).forEach((b) => {
+        b.total = b.items.reduce((acc, it) => acc + (Number(it.jumlah) || 0), 0);
+      });
+
+      catatBulan(dataCashPerBulan);
+      catatBulan(dataMaterialPerBulan);
+      catatBulan(dataPengeluaranPerBulan);
+
+      const totalCash = Object.values(dataCashPerBulan).reduce((s, b) => s + b.total, 0);
+      const totalMaterial = Object.values(dataMaterialPerBulan).reduce((s, b) => s + b.total, 0);
+      const totalPemasukan = totalCash + totalMaterial;
+      const totalPengeluaran = Object.values(dataPengeluaranPerBulan).reduce((s, b) => s + b.total, 0);
+      const saldoAnggaran = totalPemasukan - totalPengeluaran;
+      const persenRAB = ((totalPemasukan / TARGET_RAB) * 100).toFixed(1);
+
+      document.getElementById("globalCash").innerText = formatRupiah(totalCash);
+      document.getElementById("globalMaterial").innerText = formatRupiah(totalMaterial);
+      document.getElementById("globalPemasukan").innerText = formatRupiah(totalPemasukan);
+      document.getElementById("globalPersenRAB").innerText = `${persenRAB}% dari Target RAB Rp 665.684.000`;
+      document.getElementById("globalPengeluaran").innerText = formatRupiah(totalPengeluaran);
+
+      const kartuSaldo = document.getElementById("kartuSaldoAnggaran");
+      const labelSaldo = document.getElementById("labelSaldoAnggaran");
+      document.getElementById("globalSaldoAnggaran").innerText = formatRupiah(saldoAnggaran);
+      if (saldoAnggaran < 0) {
+        kartuSaldo.classList.add("defisit");
+        labelSaldo.innerText = "Defisit Anggaran";
+      } else {
+        kartuSaldo.classList.remove("defisit");
+        labelSaldo.innerText = "Saldo Anggaran";
+      }
+
+      document.getElementById("tabTotalCash").innerText = formatRupiah(totalCash);
+      document.getElementById("tabTotalMaterial").innerText = formatRupiah(totalMaterial);
+      document.getElementById("tabTotalPengeluaran").innerText = formatRupiah(totalPengeluaran);
+
+      renderTombolBulan("bulanListCash", dataCashPerBulan, "cash");
+      renderTombolBulan("bulanListMaterial", dataMaterialPerBulan, "material");
+      renderTombolBulan("bulanListPengeluaran", dataPengeluaranPerBulan, "pengeluaran");
+
+      if (document.getElementById("panel-tr-grafik").classList.contains("terbuka")) {
+        renderSemuaGrafik();
+      }
+
+      document.getElementById("statusSinkron").innerText = sumberLabel;
+    }
+
+    async function muatDataTransparansi(manual = false) {
+      const statusEl = document.getElementById("statusSinkron");
+      if (manual) statusEl.innerText = "Memuat ulang data dari spreadsheet...";
+
+      prosesDataset(FALLBACK_CASH, FALLBACK_MATERIAL, FALLBACK_PENGELUARAN, "Menghubungkan ke spreadsheet...");
+
+      try {
+        const [rowsCash, rowsMaterial, rowsKeluar] = await Promise.all([
+          ambilSheetGViz("donasi cash"),
+          ambilSheetGViz("donasi transfer"),
+          ambilSheetGViz("pengeluaran")
+        ]);
+
+        if (rowsCash.length > 0 || rowsMaterial.length > 0 || rowsKeluar.length > 0) {
+          prosesDataset(rowsCash, rowsMaterial, rowsKeluar, "Tersinkronisasi langsung dengan spreadsheet Donasi dan progres.");
+        }
+      } catch (err) {
+        prosesDataset(
+          FALLBACK_CASH,
+          FALLBACK_MATERIAL,
+          FALLBACK_PENGELUARAN,
+          "Menampilkan data rekap terhitung (pastikan akses spreadsheet diset 'Siapa saja yang memiliki link')."
+        );
+      }
+    }
+
+    function salinRekening() {
+      const teks = document.getElementById("noRekening").innerText.trim();
+      const status = document.getElementById("statusSalin");
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(teks).then(() => {
+          status.innerText = "Tersalin!";
+          setTimeout(() => (status.innerText = ""), 2500);
+        });
+      } else {
+        const inputSementara = document.createElement("textarea");
+        inputSementara.value = teks;
+        document.body.appendChild(inputSementara);
+        inputSementara.select();
+        document.execCommand("copy");
+        document.body.removeChild(inputSementara);
+        status.innerText = "Tersalin!";
+        setTimeout(() => (status.innerText = ""), 2500);
+      }
+    }
+
+    muatDataTransparansi(false);
+  </script>
+
+</body>
+</html>
